@@ -1,19 +1,45 @@
-# Flutter Web MVP
+# ReciclaMack Olho Vivo — Frontend
 
-## Features
-- Upload photo or capture from camera.
-- Calls `POST /v1/analyze-image` with timeout + retry.
-- Displays detections, hazard summary, disposal instructions, legal references.
-- Portuguese-only UI.
-- Placeholder for map integration in Phase 2.
-- Camera button is enabled only in secure context (`https`) on web. On `http`, users can still upload from gallery.
-- `API_BASE_URL` supports:
-  - absolute API URL (example: `http://<EC2_IP>:8000`)
-  - same-origin mode (`/`) for reverse-proxy/TLS deployments
+Interface web do projeto de extensão universitária **Olho Vivo — Identificação de Resíduos Eletroeletrônicos por Visão Computacional**, desenvolvido no âmbito da Universidade Presbiteriana Mackenzie, Faculdade de Computação e Informática (FCI).
 
-## Run
-1. `flutter pub get`
-2. `flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:8000`
+O frontend permite que a comunidade envie ou capture uma foto de um resíduo eletroeletrônico, consulte a API de análise por visão computacional e visualize orientações de descarte ambientalmente correto.
 
-## Test
-- `flutter test`
+## Contexto acadêmico
+
+- Instituição: Universidade Presbiteriana Mackenzie
+- Unidade: Faculdade de Computação e Informática (FCI)
+- Área temática: Meio Ambiente, Tecnologia e Produção, Educação Ambiental
+- Linha de extensão: Gestão de Resíduos Sólidos e Educação para a Sustentabilidade
+- Coordenação/orientação: Profa. Sandra Bozolan
+
+## Equipe discente
+
+- Ricardo Zulian de Souza Amaral
+- Marcos Volponi Cervan
+- Flavio Estevam Nogueira Andrade
+
+## Funcionalidades
+
+- Upload de foto ou captura pela câmera do navegador.
+- Integração com `POST /v1/analyze-image`.
+- Exibição de detecções, resumo de risco, orientações de descarte e referências legais.
+- Interface em português.
+- Suporte a `API_BASE_URL` absoluto ou modo same-origin (`/`) para deploy com proxy HTTPS.
+- Botão de câmera habilitado apenas em contexto seguro (`https`); em `http`, o usuário ainda pode enviar foto da galeria.
+
+## Executar localmente
+
+```powershell
+flutter pub get
+flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:8000
+```
+
+## Testes
+
+```powershell
+flutter test
+```
+
+## Papel no sistema
+
+Este repositório é autônomo e contém apenas a aplicação Flutter Web. A API, o modelo de inferência e o pipeline de treinamento ficam em repositórios separados.
