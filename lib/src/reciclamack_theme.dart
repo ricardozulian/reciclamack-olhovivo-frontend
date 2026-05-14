@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'design_tokens.dart';
 
 ThemeData buildReciclaMackTheme() {
+  const fontFamily = 'PlusJakartaSans';
   final colorScheme = ColorScheme.fromSeed(
     seedColor: ReciclaColors.primary,
     brightness: Brightness.dark,
@@ -100,19 +100,20 @@ ThemeData buildReciclaMackTheme() {
     brightness: Brightness.dark,
     colorScheme: colorScheme,
     scaffoldBackgroundColor: ReciclaColors.bg,
-    textTheme: GoogleFonts.plusJakartaSansTextTheme(textTheme),
-    appBarTheme: AppBarTheme(
+    fontFamily: fontFamily,
+    textTheme: textTheme.apply(fontFamily: fontFamily),
+    appBarTheme: const AppBarTheme(
       backgroundColor: ReciclaColors.bgElevated,
       foregroundColor: ReciclaColors.fg1,
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: false,
-      titleTextStyle: GoogleFonts.plusJakartaSans(
+      titleTextStyle: TextStyle(
         fontSize: 17,
         fontWeight: FontWeight.w800,
         color: ReciclaColors.fg1,
       ),
-      shape: const Border(
+      shape: Border(
         bottom: BorderSide(color: ReciclaColors.border, width: 1),
       ),
     ),
@@ -136,7 +137,7 @@ ThemeData buildReciclaMackTheme() {
           borderRadius: BorderRadius.circular(ReciclaRadii.pill),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
-        textStyle: GoogleFonts.plusJakartaSans(
+        textStyle: const TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w600,
         ),
@@ -151,7 +152,7 @@ ThemeData buildReciclaMackTheme() {
           borderRadius: BorderRadius.circular(ReciclaRadii.pill),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        textStyle: GoogleFonts.plusJakartaSans(
+        textStyle: const TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w600,
         ),
@@ -160,7 +161,7 @@ ThemeData buildReciclaMackTheme() {
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: ReciclaColors.primary,
-        textStyle: GoogleFonts.plusJakartaSans(
+        textStyle: const TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w600,
         ),

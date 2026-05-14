@@ -18,6 +18,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  static const int _maxUploadBytes = 10 * 1024 * 1024;
   static const String _apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: 'http://localhost:8000',
@@ -65,6 +66,13 @@ class _HomePageState extends State<HomePage> {
         return;
       }
       final bytes = await image.readAsBytes();
+      if (bytes.length > _maxUploadBytes) {
+        setState(() {
+          _error = 'Imagem acima do limite de 10 MB. Escolha uma imagem menor.';
+          _loading = false;
+        });
+        return;
+      }
       final analyzed = await _sendWithRetry(image.name, bytes);
       setState(() {
         _result = analyzed;
@@ -128,11 +136,23 @@ class _HomePageState extends State<HomePage> {
 
   Uri _apiUri(String path) {
     final normalizedPath = path.startsWith('/') ? path : '/$path';
-    final base = _apiBaseUrl.trim();
+    final base = _effectiveApiBaseUrl();
     if (base.isEmpty || base == '/') {
       return Uri.parse(normalizedPath);
     }
     return Uri.parse('${base.replaceAll(RegExp(r'/+$'), '')}$normalizedPath');
+  }
+
+  String _effectiveApiBaseUrl() {
+    final configured = _apiBaseUrl.trim();
+    if (!kIsWeb || configured != 'http://localhost:8000') {
+      return configured;
+    }
+    final host = Uri.base.host;
+    if (host.isEmpty || host == 'localhost' || host == '127.0.0.1') {
+      return configured;
+    }
+    return 'http://$host:8000';
   }
 
   @override
