@@ -267,55 +267,7 @@ class _HomePageState extends State<HomePage> {
                   ResultPanel(result: _result!),
                 ],
 
-                const SizedBox(height: ReciclaSpacing.s8),
-                const Divider(),
-                const SizedBox(height: ReciclaSpacing.s4),
-
-                // ── Phase 2 Banner ──
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: ReciclaColors.bgElevated,
-                    border: Border.all(color: ReciclaColors.primaryBorder),
-                    borderRadius: BorderRadius.circular(ReciclaRadii.md),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: ReciclaColors.primarySurface,
-                          borderRadius: BorderRadius.circular(ReciclaRadii.sm),
-                        ),
-                        child: const Icon(
-                          Icons.map_outlined,
-                          color: ReciclaColors.primary,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Fase 2 — Em breve',
-                              style: theme.textTheme.labelLarge,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Mapa de pontos de coleta será adicionado.',
-                              style: theme.textTheme.bodyMedium,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: ReciclaSpacing.s4),
+                const SizedBox(height: ReciclaSpacing.s6),
                 Text(
                   'Aviso: Informações educacionais, não substituem orientação técnica ou jurídica. As imagens enviadas podem ser armazenadas para depuração e melhoria do modelo.',
                   style: theme.textTheme.bodySmall,

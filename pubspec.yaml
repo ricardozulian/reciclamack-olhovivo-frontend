@@ -23,6 +23,7 @@ flutter:
   assets:
     - assets/fonts/fallback/roboto/v32/KFOmCnqEu92Fr1Me4GZLCzYlKw.woff2
     - assets/fonts/fallback/notosanssymbols/v43/rP2up3q65FkAtHfwd-eIS2brbDN6gxP34F9jRRCe4W3gfQ8gb_VFRkzrbQ.woff2
+    - assets/fonts/fallback/notosanssc/v37/k3kCo84MPvpLmixcA63oeAL7Iqp5IZJF9bmaG9_FrYtHbQ.woff2
   fonts:
     - family: PlusJakartaSans
       fonts:
