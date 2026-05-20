@@ -273,7 +273,10 @@ class _HomePageState extends State<HomePage> {
 
                 const SizedBox(height: ReciclaSpacing.s6),
                 Text(
-                  'Aviso: Informações educacionais, não substituem orientação técnica ou jurídica. As imagens enviadas podem ser armazenadas e usadas para depuração, melhoria e treinamento do modelo.',
+                  'Aviso:\n'
+                  '• Este é um sistema baseado em inteligência artificial e pode apresentar erros nas identificações.\n'
+                  '• As informações são educacionais e não substituem orientação técnica, legal ou jurídica.\n'
+                  '• As imagens enviadas podem ser armazenadas e utilizadas para treinamento e avaliação do sistema.',
                   style: theme.textTheme.bodySmall,
                 ),
                 const SizedBox(height: ReciclaSpacing.s8),
