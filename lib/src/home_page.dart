@@ -19,9 +19,10 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   static const int _maxUploadBytes = 10 * 1024 * 1024;
+  static const String _defaultApiBaseUrl = 'http://localhost:8000';
   static const String _apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://localhost:8000',
+    defaultValue: _defaultApiBaseUrl,
   );
 
   final ImagePicker _picker = ImagePicker();
@@ -145,8 +146,11 @@ class _HomePageState extends State<HomePage> {
 
   String _effectiveApiBaseUrl() {
     final configured = _apiBaseUrl.trim();
-    if (!kIsWeb || configured != 'http://localhost:8000') {
+    if (!kIsWeb || configured != _defaultApiBaseUrl) {
       return configured;
+    }
+    if (Uri.base.scheme == 'https') {
+      return '/';
     }
     final host = Uri.base.host;
     if (host.isEmpty || host == 'localhost' || host == '127.0.0.1') {

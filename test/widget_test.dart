@@ -8,6 +8,6 @@ void main() {
 
     expect(find.text('Selecionar foto'), findsOneWidget);
     expect(find.text('Capturar câmera'), findsOneWidget);
-    expect(find.textContaining('Fase 2'), findsOneWidget);
+    expect(find.textContaining('Envie uma foto'), findsOneWidget);
   });
 }
