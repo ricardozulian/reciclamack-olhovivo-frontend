@@ -43,3 +43,23 @@ flutter test
 ## Papel no sistema
 
 Este repositório é autônomo e contém apenas a aplicação Flutter Web. A API, o modelo de inferência e o pipeline de treinamento ficam em repositórios separados.
+
+## Ambientes de implantação
+
+A bancada Docker compila o frontend em modo same-origin, com `API_BASE_URL=/`. Ela fica disponível em `http://192.168.1.51:8088`; no Jetson, a mesma compilação fica em `http://<ip-reservado>/`. O proxy encaminha `/v1` para a API, portanto a interface não precisa conhecer a porta `8000`.
+
+Em HTTP na LAN, o navegador permite envio de arquivo, mas bloqueia a câmera de clientes remotos. O modo totem funciona porque o Chromium e a câmera estão no próprio Jetson e a interface é aberta por `http://localhost`. Uma futura câmera em navegador remoto ainda exigirá HTTPS. Consulte `../../deploy/README.md`.
+
+
+## Versão 0.2.0: imagem anotada e modo totem
+
+A interface mantém os bytes da foto analisada e desenha todas as caixas retornadas pela API sobre a imagem, com rótulo em português e confiança. A API deve fornecer `image_width` e `image_height` no mesmo sistema de coordenadas das caixas.
+
+Existem dois modos de compilação:
+
+```powershell
+flutter build web --release --dart-define=API_BASE_URL=/ --dart-define=APP_MODE=web
+flutter build web --release --dart-define=API_BASE_URL=/ --dart-define=APP_MODE=totem --dart-define=TOTEM_RESET_SECONDS=45
+```
+
+No modo `totem`, o Chromium executado no próprio Jetson abre `http://localhost/`, mostra a câmera USB local, captura uma foto por solicitação e envia apenas essa foto à API local. Não há streaming de vídeo pela rede nem inferência contínua. Navegadores remotos em HTTP continuam limitados ao envio de arquivos.

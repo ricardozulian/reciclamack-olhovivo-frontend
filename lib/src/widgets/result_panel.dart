@@ -11,7 +11,10 @@ class ResultPanel extends StatelessWidget {
     if (value is! List) {
       return const [];
     }
-    return value.whereType<Map>().map((item) => item.cast<String, dynamic>()).toList();
+    return value
+        .whereType<Map>()
+        .map((item) => item.cast<String, dynamic>())
+        .toList();
   }
 
   @override
@@ -160,27 +163,35 @@ class ResultPanel extends StatelessWidget {
                   const SizedBox(height: 12),
 
                   // Typical contents
-                  if ((g['typical_contents'] as List<dynamic>?)?.isNotEmpty == true) ...[
+                  if ((g['typical_contents'] as List<dynamic>?)?.isNotEmpty ==
+                      true) ...[
                     _sectionLabel('CONTEÚDO TÍPICO'),
                     const SizedBox(height: 4),
                     ...((g['typical_contents'] as List<dynamic>).map(
-                      (item) => _bulletItem('$item', ReciclaColors.primary, '•'),
+                      (item) =>
+                          _bulletItem('$item', ReciclaColors.primary, '•'),
                     )),
                     const SizedBox(height: 10),
                   ],
 
                   // Disposal steps
-                  if ((g['disposal_steps'] as List<dynamic>?)?.isNotEmpty == true) ...[
+                  if ((g['disposal_steps'] as List<dynamic>?)?.isNotEmpty ==
+                      true) ...[
                     _sectionLabel('DESCARTE CORRETO'),
                     const SizedBox(height: 4),
-                    ...((g['disposal_steps'] as List<dynamic>).asMap().entries.map(
-                      (e) => _bulletItem('${e.value}', ReciclaColors.primary, '${e.key + 1}.'),
-                    )),
+                    ...((g['disposal_steps'] as List<dynamic>)
+                        .asMap()
+                        .entries
+                        .map(
+                          (e) => _bulletItem('${e.value}',
+                              ReciclaColors.primary, '${e.key + 1}.'),
+                        )),
                     const SizedBox(height: 10),
                   ],
 
                   // Legal basis
-                  if ((g['legal_basis'] as List<dynamic>?)?.isNotEmpty == true) ...[
+                  if ((g['legal_basis'] as List<dynamic>?)?.isNotEmpty ==
+                      true) ...[
                     _sectionLabel('BASE LEGAL'),
                     const SizedBox(height: 4),
                     ...((g['legal_basis'] as List<dynamic>).map(
@@ -199,7 +210,9 @@ class ResultPanel extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
-            color: uncertain ? ReciclaColors.warningSurface : ReciclaColors.successSurface,
+            color: uncertain
+                ? ReciclaColors.warningSurface
+                : ReciclaColors.successSurface,
             border: Border.all(
               color: (uncertain ? ReciclaColors.warning : ReciclaColors.success)
                   .withValues(alpha: 0.25),
@@ -210,7 +223,8 @@ class ResultPanel extends StatelessWidget {
             children: [
               Icon(
                 Icons.check_circle_outline,
-                color: uncertain ? ReciclaColors.warning : ReciclaColors.success,
+                color:
+                    uncertain ? ReciclaColors.warning : ReciclaColors.success,
                 size: 18,
               ),
               const SizedBox(width: 10),
@@ -220,7 +234,9 @@ class ResultPanel extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: uncertain ? ReciclaColors.warning : ReciclaColors.success,
+                    color: uncertain
+                        ? ReciclaColors.warning
+                        : ReciclaColors.success,
                   ),
                 ),
               ),
