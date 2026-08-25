@@ -1,65 +1,74 @@
-# ReciclaMack Olho Vivo — Frontend
+# ReciclaMack Olho Vivo Frontend
 
-Interface web do projeto de extensão universitária **Olho Vivo — Identificação de Resíduos Eletroeletrônicos por Visão Computacional**, desenvolvido no âmbito da Universidade Presbiteriana Mackenzie, Faculdade de Computação e Informática (FCI).
+This repository contains the Flutter Web interface for the ReciclaMack university extension project.
 
-O frontend permite que a comunidade envie ou capture uma foto de um resíduo eletroeletrônico, consulte a API de análise por visão computacional e visualize orientações de descarte ambientalmente correto.
+The user interface text remains in Portuguese.
 
-## Contexto acadêmico
+## Academic context
 
-- Instituição: Universidade Presbiteriana Mackenzie
-- Unidade: Faculdade de Computação e Informática (FCI)
-- Área temática: Meio Ambiente, Tecnologia e Produção, Educação Ambiental
-- Linha de extensão: Gestão de Resíduos Sólidos e Educação para a Sustentabilidade
-- Coordenação/orientação: Profa. Sandra Bozolan
+- Institution: Universidade Presbiteriana Mackenzie
+- School: Faculdade de Computação e Informática (FCI)
+- Coordinator: Professor Sandra Bozolan
 
-## Equipe discente
+## Student team
 
 - Ricardo Zulian de Souza Amaral
 - Marcos Volponi Cervan
 - Flavio Estevam Nogueira Andrade
 
-## Funcionalidades
+## Features
 
-- Upload de foto ou captura pela câmera do navegador.
-- Integração com `POST /v1/analyze-image`.
-- Exibição de detecções, resumo de risco, orientações de descarte e referências legais.
-- Interface em português.
-- Suporte a `API_BASE_URL` absoluto ou modo same-origin (`/`) para deploy com proxy HTTPS.
-- Botão de câmera habilitado apenas em contexto seguro (`https`); em `http`, o usuário ainda pode enviar foto da galeria.
+- Image upload and browser camera capture.
+- Integration with `POST /v1/analyze-image`.
+- Detection boxes, confidence values, risk guidance, and disposal guidance.
+- Portuguese user interface.
+- Absolute or same-origin `API_BASE_URL` support.
+- Camera control only in a secure context or on `http://localhost`.
 
-## Executar localmente
+## Run locally
 
 ```powershell
 flutter pub get
 flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:8000
 ```
 
-## Testes
+## Run tests
 
 ```powershell
 flutter test
 ```
 
-## Papel no sistema
+## Deployment environments
 
-Este repositório é autônomo e contém apenas a aplicação Flutter Web. A API, o modelo de inferência e o pipeline de treinamento ficam em repositórios separados.
+The Docker test host builds the frontend with `API_BASE_URL=/`.
 
-## Ambientes de implantação
+The LAN interface is `http://192.168.1.51:8088`.
 
-A bancada Docker compila o frontend em modo same-origin, com `API_BASE_URL=/`. Ela fica disponível em `http://192.168.1.51:8088`; no Jetson, a mesma compilação fica em `http://<ip-reservado>/`. O proxy encaminha `/v1` para a API, portanto a interface não precisa conhecer a porta `8000`.
+The Jetson interface is `http://<JETSON_IP>/`.
 
-Em HTTP na LAN, o navegador permite envio de arquivo, mas bloqueia a câmera de clientes remotos. O modo totem funciona porque o Chromium e a câmera estão no próprio Jetson e a interface é aberta por `http://localhost`. Uma futura câmera em navegador remoto ainda exigirá HTTPS. Consulte `../../deploy/README.md`.
+Nginx sends `/v1` to the API, so the frontend does not need direct API port information.
 
+Remote HTTP browsers can upload files but cannot use the camera.
 
-## Versão 0.2.0: imagem anotada e modo totem
+The totem uses `http://localhost` in Chromium on the Jetson. This local origin can use the attached camera.
 
-A interface mantém os bytes da foto analisada e desenha todas as caixas retornadas pela API sobre a imagem, com rótulo em português e confiança. A API deve fornecer `image_width` e `image_height` no mesmo sistema de coordenadas das caixas.
+A future remote camera interface needs HTTPS.
 
-Existem dois modos de compilação:
+Read `../../deploy/README.md` for deployment details.
+
+## Version 0.2.0
+
+The interface keeps the analyzed image bytes and draws every returned box on the image.
+
+The API supplies `image_width` and `image_height` in the same coordinate system as the boxes.
+
+Build the two modes with these commands:
 
 ```powershell
 flutter build web --release --dart-define=API_BASE_URL=/ --dart-define=APP_MODE=web
 flutter build web --release --dart-define=API_BASE_URL=/ --dart-define=APP_MODE=totem --dart-define=TOTEM_RESET_SECONDS=45
 ```
 
-No modo `totem`, o Chromium executado no próprio Jetson abre `http://localhost/`, mostra a câmera USB local, captura uma foto por solicitação e envia apenas essa foto à API local. Não há streaming de vídeo pela rede nem inferência contínua. Navegadores remotos em HTTP continuam limitados ao envio de arquivos.
+The `totem` mode captures one image for each user request.
+
+The system does not stream video over the network and does not use continuous inference.
