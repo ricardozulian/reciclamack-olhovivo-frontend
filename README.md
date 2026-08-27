@@ -66,9 +66,11 @@ Build the two modes with these commands:
 
 ```powershell
 flutter build web --release --dart-define=API_BASE_URL=/ --dart-define=APP_MODE=web
-flutter build web --release --dart-define=API_BASE_URL=/ --dart-define=APP_MODE=totem --dart-define=TOTEM_RESET_SECONDS=45
+flutter build web --release --dart-define=API_BASE_URL=/ --dart-define=APP_MODE=totem --dart-define=TOTEM_RESET_SECONDS=45 --dart-define=TOTEM_SCAN_INTERVAL_MS=1000 --dart-define=TOTEM_CONFIRM_FRAMES=2
 ```
 
-The `totem` mode captures one image for each user request.
+The `totem` mode captures probe images at a fixed interval. It requires two matching dominant-class results before confirmation.
 
-The system does not stream video over the network and does not use continuous inference.
+The API does not retain probe images. It retains only the confirmed image and its prediction sidecar.
+
+The system does not stream video over the network.

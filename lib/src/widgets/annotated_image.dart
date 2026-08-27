@@ -1,6 +1,7 @@
+import 'dart:convert';
 import 'dart:math' as math;
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../design_tokens.dart';
@@ -38,8 +39,7 @@ class AnnotatedImage extends StatelessWidget {
             children: [
               ColoredBox(
                 color: ReciclaColors.bgDeep,
-                child: Image.memory(bytes,
-                    fit: BoxFit.contain, gaplessPlayback: true),
+                child: _resultImage(),
               ),
               if (detections.isNotEmpty && imageWidth > 0 && imageHeight > 0)
                 CustomPaint(
@@ -75,6 +75,57 @@ class AnnotatedImage extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _resultImage() {
+    if (!kIsWeb) {
+      return Image.memory(
+        bytes,
+        fit: BoxFit.contain,
+        gaplessPlayback: true,
+      );
+    }
+    return Image.network(
+      'data:${_mediaType()};base64,${base64Encode(bytes)}',
+      key: const Key('native-result-image'),
+      fit: BoxFit.contain,
+      gaplessPlayback: true,
+      webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+      errorBuilder: (context, error, stackTrace) => const Center(
+        child: Text(
+          'Não foi possível mostrar a imagem confirmada.',
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  }
+
+  String _mediaType() {
+    if (bytes.length >= 8 &&
+        bytes[0] == 0x89 &&
+        bytes[1] == 0x50 &&
+        bytes[2] == 0x4e &&
+        bytes[3] == 0x47) {
+      return 'image/png';
+    }
+    if (bytes.length >= 6 &&
+        bytes[0] == 0x47 &&
+        bytes[1] == 0x49 &&
+        bytes[2] == 0x46) {
+      return 'image/gif';
+    }
+    if (bytes.length >= 12 &&
+        bytes[0] == 0x52 &&
+        bytes[1] == 0x49 &&
+        bytes[2] == 0x46 &&
+        bytes[3] == 0x46 &&
+        bytes[8] == 0x57 &&
+        bytes[9] == 0x45 &&
+        bytes[10] == 0x42 &&
+        bytes[11] == 0x50) {
+      return 'image/webp';
+    }
+    return 'image/jpeg';
   }
 }
 

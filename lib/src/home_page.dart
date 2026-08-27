@@ -7,6 +7,7 @@ import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'design_tokens.dart';
+import 'totem_scan_state.dart';
 import 'widgets/annotated_image.dart';
 import 'widgets/brand_app_bar.dart';
 import 'widgets/result_panel.dart';
@@ -34,6 +35,14 @@ class _HomePageState extends State<HomePage> {
     'TOTEM_RESET_SECONDS',
     defaultValue: 45,
   );
+  static const int _totemScanIntervalMs = int.fromEnvironment(
+    'TOTEM_SCAN_INTERVAL_MS',
+    defaultValue: 1000,
+  );
+  static const int _totemConfirmationFrames = int.fromEnvironment(
+    'TOTEM_CONFIRM_FRAMES',
+    defaultValue: 2,
+  );
 
   final ImagePicker _picker = ImagePicker();
   bool _loading = false;
@@ -43,6 +52,7 @@ class _HomePageState extends State<HomePage> {
   String? _selectedName;
   Timer? _resetTimer;
   late final bool _cameraSecureContext;
+  late final TotemScanState _totemScanState;
 
   bool get _isTotem => _appMode.toLowerCase() == 'totem';
 
@@ -50,6 +60,10 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _cameraSecureContext = _isSecureCameraContext();
+    _totemScanState = TotemScanState(
+      confirmationFrames:
+          _totemConfirmationFrames > 0 ? _totemConfirmationFrames : 2,
+    );
   }
 
   @override
@@ -119,6 +133,64 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<bool> _processTotemFrame(
+    String filename,
+    Uint8List bytes,
+    void Function(String message) reportStatus,
+  ) async {
+    reportStatus('Analisando imagem…');
+    final probe = await _sendAnalyzeRequest(filename, bytes, persist: false);
+    if (!mounted) return false;
+
+    final probeDetections = _detectionsFrom(probe);
+    final wasWaitingForClear = _totemScanState.requiresClear;
+    final decision = _totemScanState.recordDetections(
+      probeDetections,
+    );
+    final expectedClass = decision.confirmedClass;
+    if (expectedClass == null) {
+      if (wasWaitingForClear) {
+        reportStatus(
+          !_totemScanState.requiresClear
+              ? 'Pronto para o próximo item.'
+              : probeDetections.isEmpty
+                  ? 'Área livre: verificação ${_totemScanState.clearFrameCount} de ${_totemScanState.clearFrames}.'
+                  : 'Retire o item anterior para continuar.',
+        );
+      } else if (probeDetections.isEmpty) {
+        reportStatus('Nenhum item identificado. Continuando a busca…');
+      } else {
+        reportStatus(
+          'Item encontrado. Mantenha-o na posição para confirmar.',
+        );
+      }
+      return true;
+    }
+
+    reportStatus('Item confirmado. Processando resultado…');
+    final confirmed = await _sendAnalyzeRequest(filename, bytes);
+    if (!mounted) return false;
+    final confirmedClass = _totemScanState.dominantClass(
+      _detectionsFrom(confirmed),
+    );
+    if (confirmedClass != expectedClass) {
+      reportStatus('A confirmação mudou. Continuando a busca…');
+      return true;
+    }
+
+    reportStatus('Resultado pronto.');
+    _resetTimer?.cancel();
+    setState(() {
+      _selectedBytes = bytes;
+      _selectedName = filename;
+      _result = confirmed;
+      _error = null;
+      _loading = false;
+    });
+    _scheduleTotemReset();
+    return false;
+  }
+
   void _scheduleTotemReset() {
     if (!_isTotem || _totemResetSeconds <= 0) return;
     _resetTimer?.cancel();
@@ -131,6 +203,7 @@ class _HomePageState extends State<HomePage> {
   void _resetSession() {
     _resetTimer?.cancel();
     if (!mounted) return;
+    if (_isTotem) _totemScanState.requireClear();
     setState(() {
       _selectedBytes = null;
       _selectedName = null;
@@ -168,9 +241,16 @@ class _HomePageState extends State<HomePage> {
 
   Future<Map<String, dynamic>> _sendAnalyzeRequest(
     String filename,
-    Uint8List bytes,
-  ) async {
-    final request = http.MultipartRequest('POST', _apiUri('/v1/analyze-image'))
+    Uint8List bytes, {
+    bool persist = true,
+  }) async {
+    var uri = _apiUri('/v1/analyze-image');
+    if (!persist) {
+      uri = uri.replace(
+        queryParameters: {...uri.queryParameters, 'persist': 'false'},
+      );
+    }
+    final request = http.MultipartRequest('POST', uri)
       ..files.add(
         http.MultipartFile.fromBytes(
           'file',
@@ -217,7 +297,13 @@ class _HomePageState extends State<HomePage> {
   }
 
   List<Map<String, dynamic>> _detections() {
-    final value = _result?['detections'];
+    final result = _result;
+    if (result == null) return const [];
+    return _detectionsFrom(result);
+  }
+
+  List<Map<String, dynamic>> _detectionsFrom(Map<String, dynamic> result) {
+    final value = result['detections'];
     if (value is! List) return const [];
     return value
         .whereType<Map>()
@@ -247,7 +333,14 @@ class _HomePageState extends State<HomePage> {
                 _buildHero(theme),
                 const SizedBox(height: ReciclaSpacing.s6),
                 if (_isTotem && bytes == null)
-                  TotemCamera(onCapture: _analyzeBytes)
+                  TotemCamera(
+                    onFrame: _processTotemFrame,
+                    scanInterval: const Duration(
+                      milliseconds: _totemScanIntervalMs > 0
+                          ? _totemScanIntervalMs
+                          : 1000,
+                    ),
+                  )
                 else if (!_isTotem)
                   _buildWebActions(),
                 if (!_isTotem && !_cameraSecureContext) ...[
@@ -364,7 +457,7 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(height: ReciclaSpacing.s3),
           Text(
             _isTotem
-                ? 'Capture uma foto para ver o item identificado e aprender como descartá-lo.'
+                ? 'Aproxime o item. O totem identifica o equipamento automaticamente.'
                 : 'Envie uma foto de aparelho eletrônico para receber orientações de descarte.',
             style: theme.textTheme.bodyLarge,
             textAlign: TextAlign.center,
