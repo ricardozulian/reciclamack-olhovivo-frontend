@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -51,5 +52,30 @@ void main() {
     );
 
     expect(find.byKey(const Key('detection-overlay')), findsNothing);
+  });
+
+  testWidgets('replaces the image element when image bytes change',
+      (tester) async {
+    final firstBytes = base64Decode(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+    );
+    final secondBytes = Uint8List.fromList(firstBytes);
+
+    Widget subject(Uint8List bytes) => MaterialApp(
+          home: AnnotatedImage(
+            bytes: bytes,
+            imageWidth: 1,
+            imageHeight: 1,
+            detections: const [],
+          ),
+        );
+
+    await tester.pumpWidget(subject(firstBytes));
+    final firstKey = tester.widget<Image>(find.byType(Image)).key;
+
+    await tester.pumpWidget(subject(secondBytes));
+    final secondKey = tester.widget<Image>(find.byType(Image)).key;
+
+    expect(firstKey, isNot(secondKey));
   });
 }

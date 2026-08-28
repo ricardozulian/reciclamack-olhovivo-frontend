@@ -81,13 +81,14 @@ class AnnotatedImage extends StatelessWidget {
     if (!kIsWeb) {
       return Image.memory(
         bytes,
+        key: ObjectKey(bytes),
         fit: BoxFit.contain,
         gaplessPlayback: true,
       );
     }
     return Image.network(
       'data:${_mediaType()};base64,${base64Encode(bytes)}',
-      key: const Key('native-result-image'),
+      key: ObjectKey(bytes),
       fit: BoxFit.contain,
       gaplessPlayback: true,
       webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
