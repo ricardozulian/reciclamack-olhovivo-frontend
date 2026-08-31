@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 
 import 'src/home_page.dart';
 import 'src/reciclamack_theme.dart';
+import 'src/totem_page.dart';
+
+const String _appMode = String.fromEnvironment(
+  'APP_MODE',
+  defaultValue: 'web',
+);
 
 void main() {
   runApp(const ReciclaMackApp());
@@ -16,7 +22,7 @@ class ReciclaMackApp extends StatelessWidget {
       title: 'ReciclaMack',
       debugShowCheckedModeBanner: false,
       theme: buildReciclaMackTheme(),
-      home: const HomePage(),
+      home: _appMode == 'totem' ? const TotemPage() : const HomePage(),
     );
   }
 }

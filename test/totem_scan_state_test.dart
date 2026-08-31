@@ -7,6 +7,16 @@ Map<String, dynamic> detection(String className, double area) => {
     };
 
 void main() {
+  test('confirms the first dominant frame in one-step mode', () {
+    final state = TotemScanState(confirmationFrames: 1);
+
+    expect(
+      state.recordDetections(
+          [detection('mobile_phone_tablet', 50)]).confirmedClass,
+      'mobile_phone_tablet',
+    );
+  });
+
   test('confirms the largest class after two matching frames', () {
     final state = TotemScanState(confirmationFrames: 2);
 

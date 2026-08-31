@@ -1,36 +1,40 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
 import '../design_tokens.dart';
+import '../totem_camera_adapter.dart';
+import '../totem_camera_adapter_types.dart';
 import '../totem_scan_state.dart';
+import '../totem_status.dart';
 
 typedef TotemFrameCallback = Future<bool> Function(
   String filename,
   Uint8List bytes,
-  void Function(String message) reportStatus,
 );
 
 class TotemCamera extends StatefulWidget {
   const TotemCamera({
     required this.onFrame,
+    required this.onStatusChanged,
     required this.scanInterval,
+    required this.jpegQuality,
     super.key,
   });
 
   final TotemFrameCallback onFrame;
+  final ValueChanged<TotemStatus> onStatusChanged;
   final Duration scanInterval;
+  final double jpegQuality;
 
   @override
   State<TotemCamera> createState() => _TotemCameraState();
 }
 
 class _TotemCameraState extends State<TotemCamera> with WidgetsBindingObserver {
-  CameraController? _controller;
+  TotemCameraAdapter? _adapter;
   String? _error;
-  String? _statusMessage;
   bool _initializing = true;
   bool _capturing = false;
   bool _active = true;
@@ -45,67 +49,73 @@ class _TotemCameraState extends State<TotemCamera> with WidgetsBindingObserver {
   }
 
   Future<void> _initialize() async {
-    await _controller?.dispose();
+    _scanTimer?.cancel();
+    await _adapter?.dispose();
+    final adapter = createTotemCameraAdapter();
+    _adapter = adapter;
     if (mounted) {
       setState(() {
-        _controller = null;
         _initializing = true;
         _error = null;
       });
+      _emit(
+        TotemPhase.initializing,
+        'Preparando a câmera',
+        'Aguarde enquanto o totem inicia a captura.',
+      );
     }
     try {
-      final cameras = await availableCameras();
-      if (cameras.isEmpty) {
-        throw CameraException(
-          'CameraUnavailable',
-          'Nenhuma câmera encontrada.',
-        );
-      }
-      final controller = CameraController(
-        _chooseCamera(cameras),
-        ResolutionPreset.high,
-        enableAudio: false,
-      );
-      await controller.initialize();
-      if (!mounted) {
-        await controller.dispose();
+      await adapter.initialize();
+      if (!mounted || adapter != _adapter) {
+        await adapter.dispose();
         return;
       }
-      setState(() {
-        _controller = controller;
-        _initializing = false;
-      });
+      setState(() => _initializing = false);
+      _emitScanning();
       _scheduleCapture(Duration.zero);
-    } on CameraException catch (error) {
+    } on TotemCameraAdapterException catch (error) {
       if (!mounted) return;
       setState(() {
         _initializing = false;
         _error = _cameraMessage(error);
       });
+      _emit(TotemPhase.cameraError, 'Câmera indisponível', _error!);
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _initializing = false;
-        _error = 'Não foi possível iniciar a câmera conectada.';
+        _error = 'Verifique a câmera e tente novamente.';
       });
+      _emit(TotemPhase.cameraError, 'Câmera indisponível', _error!);
     }
   }
 
-  CameraDescription _chooseCamera(List<CameraDescription> cameras) {
-    for (final camera in cameras) {
-      if (camera.lensDirection == CameraLensDirection.external) return camera;
+  String _cameraMessage(TotemCameraAdapterException error) {
+    if (error.code == 'permission_denied') {
+      return 'Autorize a câmera para este totem e tente novamente.';
     }
-    for (final camera in cameras) {
-      if (camera.lensDirection == CameraLensDirection.back) return camera;
+    if (error.code == 'not_found') {
+      return 'Nenhuma câmera foi encontrada.';
     }
-    return cameras.first;
+    return 'Verifique a conexão da câmera e tente novamente.';
   }
 
-  String _cameraMessage(CameraException error) {
-    if (error.code.toLowerCase().contains('denied')) {
-      return 'Acesso à câmera negado. Autorize a câmera para este totem e tente novamente.';
-    }
-    return 'Câmera indisponível. Verifique a conexão USB e tente novamente.';
+  void _emit(TotemPhase phase, String headline, String instruction) {
+    widget.onStatusChanged(
+      TotemStatus(
+        phase: phase,
+        headline: headline,
+        instruction: instruction,
+      ),
+    );
+  }
+
+  void _emitScanning() {
+    _emit(
+      TotemPhase.scanning,
+      'Procurando equipamento',
+      'Centralize o item no quadrado e mantenha-o imóvel.',
+    );
   }
 
   void _scheduleCapture(Duration delay) {
@@ -114,44 +124,41 @@ class _TotemCameraState extends State<TotemCamera> with WidgetsBindingObserver {
     _scanTimer = Timer(delay, _capture);
   }
 
-  void _reportStatus(String message) {
-    if (!mounted) return;
-    setState(() => _statusMessage = message);
-  }
-
   Future<void> _capture() async {
-    final controller = _controller;
-    if (!_active ||
-        controller == null ||
-        !controller.value.isInitialized ||
-        _capturing) {
-      return;
-    }
-    setState(() {
-      _capturing = true;
-      _statusMessage = 'Capturando imagem…';
-    });
+    final adapter = _adapter;
+    if (!_active || adapter == null || _initializing || _capturing) return;
+    setState(() => _capturing = true);
+    _emit(
+      TotemPhase.capturing,
+      'Capturando o item',
+      'Mantenha o item no centro do quadrado.',
+    );
+
     Duration? nextDelay;
     try {
-      final image = await controller.takePicture();
+      final bytes = await adapter.captureSquare(
+        jpegQuality: widget.jpegQuality,
+      );
       final continueScanning = await widget.onFrame(
-        image.name,
-        await image.readAsBytes(),
-        _reportStatus,
+        'totem-${DateTime.now().toUtc().microsecondsSinceEpoch}.jpg',
+        bytes,
       );
       _retrySchedule.recordSuccess();
       if (continueScanning) nextDelay = widget.scanInterval;
-    } on CameraException catch (error) {
-      if (!mounted) return;
-      setState(() => _error = _cameraMessage(error));
+    } on TotemCameraAdapterException catch (error) {
+      nextDelay = _retrySchedule.recordFailure();
+      _emit(
+        TotemPhase.retrying,
+        'Nova tentativa em ${nextDelay.inSeconds} s',
+        error.message,
+      );
     } catch (_) {
       nextDelay = _retrySchedule.recordFailure();
-      if (mounted) {
-        setState(() {
-          _statusMessage =
-              'Falha temporária na análise. O totem tentará novamente.';
-        });
-      }
+      _emit(
+        TotemPhase.retrying,
+        'Nova tentativa em ${nextDelay.inSeconds} s',
+        'Ocorreu uma falha temporária durante a análise.',
+      );
     } finally {
       if (mounted) setState(() => _capturing = false);
     }
@@ -165,9 +172,9 @@ class _TotemCameraState extends State<TotemCamera> with WidgetsBindingObserver {
         state == AppLifecycleState.detached) {
       _active = false;
       _scanTimer?.cancel();
-      _controller?.dispose();
-      _controller = null;
-    } else if (state == AppLifecycleState.resumed && _controller == null) {
+      _adapter?.dispose();
+      _adapter = null;
+    } else if (state == AppLifecycleState.resumed && _adapter == null) {
       _active = true;
       _initialize();
     }
@@ -178,132 +185,61 @@ class _TotemCameraState extends State<TotemCamera> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _active = false;
     _scanTimer?.cancel();
-    _controller?.dispose();
+    _adapter?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final controller = _controller;
-    if (_initializing) {
-      return const AspectRatio(
-        aspectRatio: 4 / 3,
-        child: ColoredBox(
-          color: ReciclaColors.bgDeep,
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: ReciclaSpacing.s3),
-                Text('Preparando a câmera…'),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    if (_error != null ||
-        controller == null ||
-        !controller.value.isInitialized) {
-      return AspectRatio(
-        aspectRatio: 4 / 3,
-        child: ColoredBox(
-          color: ReciclaColors.bgDeep,
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(ReciclaSpacing.s6),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.videocam_off_outlined,
-                    color: ReciclaColors.warning,
-                    size: 48,
-                  ),
-                  const SizedBox(height: ReciclaSpacing.s3),
-                  Text(
-                    _error ?? 'Câmera indisponível.',
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: ReciclaSpacing.s4),
-                  OutlinedButton.icon(
-                    onPressed: _initialize,
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Tentar novamente'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Column(
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(ReciclaRadii.md),
-          child: AspectRatio(
-            aspectRatio: controller.value.aspectRatio,
+    final adapter = _adapter;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: ReciclaColors.bgDeep,
+        border: Border.all(color: ReciclaColors.primary, width: 2),
+        borderRadius: BorderRadius.circular(ReciclaRadii.md),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(2),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(ReciclaRadii.md - 2),
+          child: ColoredBox(
+            color: ReciclaColors.bgDeep,
             child: Stack(
               fit: StackFit.expand,
               children: [
-                CameraPreview(controller),
-                Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: ReciclaSpacing.s4,
-                      vertical: ReciclaSpacing.s3,
-                    ),
-                    color: Colors.black.withValues(alpha: 0.78),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        if (_capturing) ...[
-                          const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2.5),
-                          ),
-                          const SizedBox(width: ReciclaSpacing.s3),
-                        ] else ...[
+                if (!_initializing && _error == null && adapter != null)
+                  adapter.buildPreview(),
+                if (_initializing)
+                  const Center(child: CircularProgressIndicator()),
+                if (_error != null)
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(ReciclaSpacing.s6),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
                           const Icon(
-                            Icons.center_focus_strong,
-                            color: ReciclaColors.primary,
-                            size: 22,
+                            Icons.videocam_off_outlined,
+                            color: ReciclaColors.warning,
+                            size: 64,
                           ),
-                          const SizedBox(width: ReciclaSpacing.s3),
+                          const SizedBox(height: ReciclaSpacing.s4),
+                          Text(_error!, textAlign: TextAlign.center),
+                          const SizedBox(height: ReciclaSpacing.s4),
+                          OutlinedButton.icon(
+                            onPressed: _initialize,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Tentar novamente'),
+                          ),
                         ],
-                        Flexible(
-                          child: Text(
-                            _statusMessage ?? 'Procurando equipamento…',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 17,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           ),
         ),
-        const SizedBox(height: ReciclaSpacing.s3),
-        const Text(
-          'Mantenha o item diante da câmera. O totem descarta as imagens de busca e guarda somente a imagem confirmada.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: ReciclaColors.fg2, fontSize: 13),
-        ),
-      ],
+      ),
     );
   }
 }
